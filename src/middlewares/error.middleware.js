@@ -1,0 +1,2 @@
+export function notFound(req, _res, next) { next(Object.assign(new Error(`Ruta no encontrada: ${req.method} ${req.originalUrl}`), { statusCode: 404 })); }
+export function errorHandler(error, _req, res, _next) { const status = error.statusCode || (error.code === 'ER_DUP_ENTRY' ? 409 : 500); const body = { error: error.message || 'Error interno del servidor' }; if (error.details) body.details = error.details; if (process.env.NODE_ENV !== 'production' && status === 500) body.stack = error.stack; res.status(status).json(body); }
