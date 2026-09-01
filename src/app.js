@@ -25,11 +25,12 @@ app.use(
 );
 app.use(express.json({ limit: "8mb" }));
 app.use('/uploads', express.static(path.join(process.cwd(), 'storage', 'uploads'), { fallthrough: false, maxAge: '7d' }));
+const authLimit = env.nodeEnv === "production" ? 10 : 1000;
 app.use(
   "/api/auth",
   rateLimit({
     windowMs: 15 * 60 * 1000,
-    limit: 10,
+    limit: authLimit,
     standardHeaders: "draft-8",
     legacyHeaders: false,
   }),
