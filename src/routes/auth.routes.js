@@ -9,18 +9,18 @@ import { ApiError, asyncHandler } from '../utils/ApiError.js';
 import { authenticate } from '../middlewares/auth.js';
 
 const router = Router();
-const loginSchema = z.object({ email: z.string().email(), password: z.string().min(8) });
-const publicUser = 'u.id_usuario, u.tipo_documento, u.documento_id, u.nombres, u.apellidos, u.email, u.telefono, u.estado, u.id_institucion, r.nombre_rol';
-const issueToken = (user) => jwt.sign({ sub: user.id_usuario, email: user.email, rol: user.nombre_rol }, env.jwtSecret, { expiresIn: env.jwtExpiresIn });
+const loginSchema = z.object({ email: z.string().email(), password: z.string().min(8), recordarme: z.boolean().optional() });
+const publicUser = 'u.id_usuario, u.tipo_documento, u.documento_id, u.nombres, u.apellidos, u.email, u.telefono, u.estado, u.id_institucion, u.avatar_url, r.nombre_rol';
 
 router.post('/login', asyncHandler(async (req, res) => {
-  const { email, password } = loginSchema.parse(req.body);
+  const { email, password, recordarme } = loginSchema.parse(req.body);
   const [rows] = await pool.execute(`SELECT ${publicUser}, u.password_hash FROM usuarios u JOIN roles r ON r.id_rol = u.id_rol WHERE u.email = ? LIMIT 1`, [email]);
   const user = rows[0];
   if (!user || user.estado !== 'Activo' || !(await bcrypt.compare(password, user.password_hash))) throw new ApiError(401, 'Credenciales inválidas.');
   await pool.execute('UPDATE usuarios SET ultimo_acceso = NOW() WHERE id_usuario = ?', [user.id_usuario]);
   delete user.password_hash;
-  res.json({ token: issueToken(user), usuario: user });
+  const token = jwt.sign({ sub: user.id_usuario, email: user.email, rol: user.nombre_rol }, env.jwtSecret, { expiresIn: recordarme ? '30d' : env.jwtExpiresIn });
+  res.json({ token, usuario: user });
 }));
 
 router.get('/me', authenticate, asyncHandler(async (req, res) => {

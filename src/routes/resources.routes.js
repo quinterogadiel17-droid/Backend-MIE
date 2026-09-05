@@ -76,6 +76,13 @@ router.put('/:resource/:id', asyncHandler(async (req, res) => {
   res.json({ data: rows[0] });
 }));
 
+router.patch('/:resource/:id', asyncHandler(async (req, res) => {
+  const config = configFor(req); const data = await payloadFor(req, req.params.resource, config, false); const keys = Object.keys(data);
+  const [result] = await pool.execute(`UPDATE \`${req.params.resource}\` SET ${keys.map((key) => `\`${key}\` = ?`).join(', ')} WHERE \`${config.pk}\` = ?`, [...keys.map((key) => data[key]), req.params.id]);
+  if (!result.affectedRows) throw new ApiError(404, 'Registro no encontrado.'); const [rows] = await pool.execute(`SELECT ${selectColumns(config)} FROM \`${req.params.resource}\` WHERE \`${config.pk}\` = ?`, [req.params.id]); if (config.sensitive) delete rows[0].password_hash;
+  res.json({ data: rows[0] });
+}));
+
 router.delete('/:resource/:id', asyncHandler(async (req, res) => {
   const config = configFor(req); const [result] = await pool.execute(`DELETE FROM \`${req.params.resource}\` WHERE \`${config.pk}\` = ?`, [req.params.id]);
   if (!result.affectedRows) throw new ApiError(404, 'Registro no encontrado.'); res.status(204).send();
