@@ -7,7 +7,7 @@ import { ApiError, asyncHandler } from '../utils/ApiError.js';
 
 const router = Router();
 router.use(allowRoles('Administrador'));
-const select = 'u.id_usuario, u.tipo_documento, u.documento_id, u.nombres, u.apellidos, u.email, u.telefono, u.direccion, u.avatar_url, u.estado, u.id_institucion, u.fecha_creacion, r.nombre_rol, r.id_rol';
+const select = 'u.id_usuario, u.tipo_documento, u.documento_id, u.nombres, u.apellidos, u.email, u.telefono, u.direccion, u.avatar_url, u.estado, u.id_institucion, i.nombre_institucion, u.fecha_creacion, r.nombre_rol, r.id_rol';
 const vacioAIndefinido = (value) => (value === '' || value === null || value === undefined ? undefined : Number(value));
 const passwordVacia = (value) => (value === '' || value === undefined ? undefined : value);
 const dataSchema = z.object({
@@ -15,7 +15,7 @@ const dataSchema = z.object({
   email: z.string().email().max(120), telefono: z.string().trim().max(20).nullable().optional(), id_institucion: z.preprocess(vacioAIndefinido, z.number().int().positive().nullable().optional()),
   id_rol: z.coerce.number().int().positive(), estado: z.enum(['Activo', 'Inactivo']), password: z.preprocess(passwordVacia, z.string().min(8).max(128).optional()),
 });
-async function one(id) { const [rows] = await pool.execute(`SELECT ${select} FROM usuarios u JOIN roles r ON r.id_rol = u.id_rol WHERE u.id_usuario = ?`, [id]); if (!rows[0]) throw new ApiError(404, 'Usuario no encontrado.'); return rows[0]; }
+async function one(id) { const [rows] = await pool.execute(`SELECT ${select} FROM usuarios u JOIN roles r ON r.id_rol = u.id_rol LEFT JOIN instituciones i ON i.id_institucion = u.id_institucion WHERE u.id_usuario = ?`, [id]); if (!rows[0]) throw new ApiError(404, 'Usuario no encontrado.'); return rows[0]; }
 async function assertRole(idRol) { const [rows] = await pool.execute('SELECT nombre_rol FROM roles WHERE id_rol = ?', [idRol]); if (!rows[0]) throw new ApiError(400, `El rol seleccionado no existe (id ${idRol}).`); return rows[0].nombre_rol; }
 
 router.get('/', asyncHandler(async (req, res) => {
@@ -26,7 +26,7 @@ router.get('/', asyncHandler(async (req, res) => {
   if (role) { conditions.push('u.id_rol = ?'); values.push(role); }
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
   const [[count]] = await pool.execute(`SELECT COUNT(*) AS total FROM usuarios u ${where}`, values);
-  const [rows] = await pool.execute(`SELECT ${select} FROM usuarios u JOIN roles r ON r.id_rol = u.id_rol ${where} ORDER BY u.id_usuario DESC LIMIT ? OFFSET ?`, [...values, pageSize, (page - 1) * pageSize]);
+  const [rows] = await pool.execute(`SELECT ${select} FROM usuarios u JOIN roles r ON r.id_rol = u.id_rol LEFT JOIN instituciones i ON i.id_institucion = u.id_institucion ${where} ORDER BY u.id_usuario DESC LIMIT ? OFFSET ?`, [...values, pageSize, (page - 1) * pageSize]);
   res.json({ data: rows, total: count.total, page, pageSize });
 }));
 router.get('/roles', asyncHandler(async (_req, res) => { const [rows] = await pool.query('SELECT id_rol, nombre_rol, descripcion FROM roles ORDER BY nombre_rol'); res.json({ data: rows }); }));
