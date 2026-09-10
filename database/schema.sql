@@ -27,7 +27,15 @@ CREATE TABLE instituciones (
     telefono VARCHAR(20) NULL,
     email_contacto VARCHAR(100) NULL,
     estado ENUM('Activo', 'Inactivo') DEFAULT 'Activo',
-    fecha_registro DATETIME DEFAULT CURRENT_TIMESTAMP
+    fecha_registro DATETIME DEFAULT CURRENT_TIMESTAMP,
+    -- Datos técnicos maestros de la institución para validaciones
+    total_pisos INT NOT NULL DEFAULT 0,
+    total_aulas INT NOT NULL DEFAULT 0,
+    capacidad_maxima DECIMAL(12,2) NOT NULL DEFAULT 0,
+    -- Porcentaje típico de ocupación por área (ej: 60-70% del área total)
+    porcentaje_ocupacion_tipica DECIMAL(5,2) NOT NULL DEFAULT 65.00,
+    -- Metadatos
+    fecha_ultima_actualizacion DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
 CREATE TABLE usuarios (
@@ -68,6 +76,7 @@ CREATE TABLE sedes (
     id_institucion INT NOT NULL,
     nombre_sede VARCHAR(150) NOT NULL,
     direccion VARCHAR(200) NOT NULL,
+    ciudad VARCHAR(200) NOT NULL,
     persona_contacto VARCHAR(150) NULL,
     telefono_contacto VARCHAR(20) NULL,
     CONSTRAINT fk_sedes_instituciones FOREIGN KEY (id_institucion) REFERENCES instituciones(id_institucion) ON DELETE CASCADE ON UPDATE CASCADE
